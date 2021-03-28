@@ -288,11 +288,17 @@ func PEMEncryptDERBytes(t *testing.T, bytes []byte, password string) []byte {
 }
 
 func WriteBytesToTempFile(t *testing.T, bytes []byte) string {
-	file, err := ioutil.TempFile(t.TempDir(), "")
+	file, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %s", err)
 	}
 	defer file.Close()
+
+	t.Cleanup(func() {
+		if err := os.Remove(file.Name()); err != nil {
+			t.Logf("failed to delete temp file: %s", err)
+		}
+	})
 
 	if _, err := file.Write(bytes); err != nil {
 		t.Fatalf("failed to write temp file: %s", err)
