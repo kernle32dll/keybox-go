@@ -9,10 +9,14 @@ import (
 )
 
 var (
-	ErrKeyMustBePEMEncoded = errors.New("invalid Key: Key must be PEM encoded private key")
-	ErrNotAPrivateKey      = errors.New("invalid Key: PEM block must be a PKCS #1, PKCS #8 or SEC 1 private key")
+	// ErrKeyMustBePEMEncoded indicates that a given data block was not a PEM encoded block.
+	ErrKeyMustBePEMEncoded = errors.New("invalid Key: Key must be PEM encoded")
+
+	// ErrNotAPrivateKey indicates that a given PEM block did not contain a known private key format.
+	ErrNotAPrivateKey = errors.New("invalid Key: PEM block must be a PKCS #1, PKCS #8 or SEC 1 private key")
 )
 
+// LoadPrivateKey tries to load a private key from a given path.
 func LoadPrivateKey(path string) (crypto.PrivateKey, error) {
 	pemString, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -22,6 +26,7 @@ func LoadPrivateKey(path string) (crypto.PrivateKey, error) {
 	return ParsePrivateKeyFromPEMBytes(pemString)
 }
 
+// LoadPrivateKeyWithPassword tries to load a private key from a given path with a password.
 func LoadPrivateKeyWithPassword(path string, password []byte) (crypto.PrivateKey, error) {
 	pemString, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -31,7 +36,7 @@ func LoadPrivateKeyWithPassword(path string, password []byte) (crypto.PrivateKey
 	return ParsePrivateKeyFromEncryptedPEMBytes(pemString, password)
 }
 
-// ParsePrivateKeyFromPEMBlock parses a given byte array to a PEM block, and parses that block
+// ParsePrivateKeyFromPEMBytes parses a given byte array to a PEM block, and parses that block
 // for a known private key (see ParsePrivateKeyFromDERBytes).
 // Will return ErrKeyMustBePEMEncoded if the given byte array is not a valid PEM block.
 func ParsePrivateKeyFromPEMBytes(pemBytes []byte) (crypto.PrivateKey, error) {
