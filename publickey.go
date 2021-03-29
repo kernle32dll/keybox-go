@@ -33,7 +33,7 @@ func LoadPublicKeyWithPassword(path string, password []byte) (crypto.PublicKey, 
 	return ParsePublicKeyFromEncryptedPEMBytes(pemString, password)
 }
 
-// ParsePublicKeyFromPEMBlock parses a given byte array to a PEM block, and parses that block
+// ParsePublicKeyFromPEMBytes parses a given byte array to a PEM block, and parses that block
 // for a known public key (see ParsePublicKeyFromDERBytes).
 // Will return ErrKeyMustBePEMEncoded if the given byte array is not a valid PEM block.
 func ParsePublicKeyFromPEMBytes(pemBytes []byte) (crypto.PublicKey, error) {
