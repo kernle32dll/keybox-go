@@ -6,6 +6,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
+
+	"github.com/youmark/pkcs8"
 )
 
 var (
@@ -57,12 +59,17 @@ func ParsePrivateKeyFromEncryptedPEMBytes(pemBytes []byte, password []byte) (cry
 		return nil, ErrKeyMustBePEMEncoded
 	}
 
-	var (
-		err            error
-		blockDecrypted []byte
-	)
-	if blockDecrypted, err = x509.DecryptPEMBlock(block, password); err != nil {
-		return nil, err
+	var blockDecrypted []byte
+	if x509.IsEncryptedPEMBlock(block) {
+		var err error
+		if blockDecrypted, err = x509.DecryptPEMBlock(block, password); err != nil {
+			return nil, err
+		}
+	} else if pkcs8Decryption, err := tryPKCS8Decryption(block, password); err == nil {
+		blockDecrypted = pkcs8Decryption
+	} else {
+		// Either its not a password secured block, or
+		blockDecrypted = block.Bytes
 	}
 
 	return ParsePrivateKeyFromDERBytes(blockDecrypted)
@@ -85,4 +92,18 @@ func ParsePrivateKeyFromDERBytes(derBytes []byte) (crypto.PrivateKey, error) {
 	}
 
 	return parsedKey, nil
+}
+
+func tryPKCS8Decryption(block *pem.Block, password []byte) ([]byte, error) {
+	pkcs8PrivateKey, err := pkcs8.ParsePKCS8PrivateKey(block.Bytes, password)
+	if err != nil {
+		return nil, err
+	}
+
+	decryptedBytes, err := x509.MarshalPKCS8PrivateKey(pkcs8PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptedBytes, nil
 }

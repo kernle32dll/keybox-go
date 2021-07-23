@@ -1,6 +1,9 @@
 package keybox_test
 
 import (
+	"github.com/kernle32dll/keybox-go"
+	"github.com/youmark/pkcs8"
+
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -10,7 +13,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"github.com/kernle32dll/keybox-go"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -100,13 +102,17 @@ func TestParsePrivateKeyFromEncryptedPEMBytes(t *testing.T) {
 	encryptedRsaPKCS1 := PEMEncryptDERBytes(t, PEMEncodePKCS1PrivateKey(rsaKey), testPassphrase)
 	encryptedRsaPKCS8 := PEMEncryptDERBytes(t, PEMEncodePKCS8PrivateKey(t, rsaKey), testPassphrase)
 	encryptedRsaPKCS8WrongPassword := PEMEncryptDERBytes(t, PEMEncodePKCS8PrivateKey(t, rsaKey), "nope")
+	rsaPKCS8Encrypted := PEMEncodePKCS8PrivateKeyEncrypted(t, rsaKey, testPassphrase)
+	rsaPKCS8EncryptedWrongPassword := PEMEncodePKCS8PrivateKeyEncrypted(t, rsaKey, "nope")
 
 	ecdsaKey := GenerateECDSAKey(t)
 	encryptedEcdsaPKCS8 := PEMEncryptDERBytes(t, PEMEncodePKCS8PrivateKey(t, ecdsaKey), testPassphrase)
 	encryptedEcdsaSEC1 := PEMEncryptDERBytes(t, PEMEncodeSEC1PrivateKey(t, ecdsaKey), testPassphrase)
+	ecdsaPKCS8Encrypted := PEMEncodePKCS8PrivateKeyEncrypted(t, ecdsaKey, testPassphrase)
 
 	ed25519Key := GenerateEd25519Key(t)
 	encryptedEd25519PKCS8 := PEMEncryptDERBytes(t, PEMEncodePKCS8PrivateKey(t, ed25519Key), testPassphrase)
+	ed25519PKCS8Encrypted := PEMEncodePKCS8PrivateKeyEncrypted(t, ed25519Key, testPassphrase)
 
 	trashKey := pem.EncodeToMemory(&pem.Block{Type: "TRASH PRIVATE KEY"})
 	encryptedTrashKey := PEMEncryptDERBytes(t, trashKey, testPassphrase)
@@ -120,15 +126,20 @@ func TestParsePrivateKeyFromEncryptedPEMBytes(t *testing.T) {
 		want    crypto.PrivateKey
 		wantErr error
 	}{
-		{name: "RSA PKCS1", args: args{pemBytes: encryptedRsaPKCS1}, want: rsaKey, wantErr: nil},
-		{name: "RSA PKCS8", args: args{pemBytes: encryptedRsaPKCS8}, want: rsaKey, wantErr: nil},
+		{name: "RSA PKCS1 RFC1423", args: args{pemBytes: encryptedRsaPKCS1}, want: rsaKey, wantErr: nil},
+		{name: "RSA PKCS8 RFC1423", args: args{pemBytes: encryptedRsaPKCS8}, want: rsaKey, wantErr: nil},
 
-		{name: "RSA PKCS8 wrong password", args: args{pemBytes: encryptedRsaPKCS8WrongPassword}, want: nil, wantErr: x509.IncorrectPasswordError},
+		{name: "RSA PKCS8 RFC1423 wrong password", args: args{pemBytes: encryptedRsaPKCS8WrongPassword}, want: nil, wantErr: x509.IncorrectPasswordError},
 
-		{name: "ecdsa PKCS8", args: args{pemBytes: encryptedEcdsaPKCS8}, want: ecdsaKey, wantErr: nil},
-		{name: "ecdsa SEC1", args: args{pemBytes: encryptedEcdsaSEC1}, want: ecdsaKey, wantErr: nil},
+		{name: "RSA PKCS8 2.0", args: args{pemBytes: rsaPKCS8Encrypted}, want: rsaKey, wantErr: nil},
+		{name: "RSA PKCS8 2.0 wrong password", args: args{pemBytes: rsaPKCS8EncryptedWrongPassword}, want: nil, wantErr: keybox.ErrNotAPrivateKey},
 
-		{name: "ed25519 PKCS8", args: args{pemBytes: encryptedEd25519PKCS8}, want: ed25519Key, wantErr: nil},
+		{name: "ecdsa PKCS8 RFC1423", args: args{pemBytes: encryptedEcdsaPKCS8}, want: ecdsaKey, wantErr: nil},
+		{name: "ecdsa SEC1 RFC1423", args: args{pemBytes: encryptedEcdsaSEC1}, want: ecdsaKey, wantErr: nil},
+		{name: "ecdsa PKCS8 2.0", args: args{pemBytes: ecdsaPKCS8Encrypted}, want: ecdsaKey, wantErr: nil},
+
+		{name: "ed25519 PKCS8 RFC1423", args: args{pemBytes: encryptedEd25519PKCS8}, want: ed25519Key, wantErr: nil},
+		{name: "ed25519 PKCS8 2.0", args: args{pemBytes: ed25519PKCS8Encrypted}, want: ed25519Key, wantErr: nil},
 
 		{name: "PEM but not a private key", args: args{pemBytes: encryptedTrashKey}, want: nil, wantErr: keybox.ErrNotAPrivateKey},
 		{name: "non-pem", args: args{pemBytes: []byte("shall not decode")}, want: nil, wantErr: keybox.ErrKeyMustBePEMEncoded},
@@ -249,7 +260,20 @@ func PEMEncodePKCS1PrivateKey(key *rsa.PrivateKey) []byte {
 func PEMEncodePKCS8PrivateKey(t *testing.T, key crypto.PrivateKey) []byte {
 	privateKeyBytes, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		t.Fatalf("failed to marshall ecdsa key: %s", err)
+		t.Fatalf("failed to marshall key: %s", err)
+	}
+	privateKeyBlock := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	}
+
+	return pem.EncodeToMemory(privateKeyBlock)
+}
+
+func PEMEncodePKCS8PrivateKeyEncrypted(t *testing.T, key crypto.PrivateKey, password string) []byte {
+	privateKeyBytes, err := pkcs8.MarshalPrivateKey(key, []byte(password), nil)
+	if err != nil {
+		t.Fatalf("failed to marshall key: %s", err)
 	}
 	privateKeyBlock := &pem.Block{
 		Type:  "PRIVATE KEY",

@@ -1,6 +1,8 @@
 package keybox_test
 
 import (
+	"github.com/kernle32dll/keybox-go"
+
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -8,7 +10,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"github.com/kernle32dll/keybox-go"
 	"os"
 	"reflect"
 	"testing"
