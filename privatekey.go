@@ -16,6 +16,10 @@ var (
 
 	// ErrNotAPrivateKey indicates that a given PEM block did not contain a known private key format.
 	ErrNotAPrivateKey = errors.New("invalid Key: PEM block must be a PKCS #1, PKCS #8 or SEC 1 private key")
+
+	// ErrUnknownEncryption indicates that the given PEM block was not encrypted in a known format,
+	// or not encrypted in the first place.
+	ErrUnknownEncryption = errors.New("invalid encryption: PEM block is encrypted in a unknown format, or not encrypted at all")
 )
 
 // LoadPrivateKey tries to load a private key from a given path.
@@ -68,8 +72,9 @@ func ParsePrivateKeyFromEncryptedPEMBytes(pemBytes []byte, password []byte) (cry
 	} else if pkcs8Decryption, err := tryPKCS8Decryption(block, password); err == nil {
 		blockDecrypted = pkcs8Decryption
 	} else {
-		// Either its not a password secured block, or
-		blockDecrypted = block.Bytes
+		// Either its not a password secured block, or is encrypted in a format
+		// we don't know.
+		return nil, ErrUnknownEncryption
 	}
 
 	return ParsePrivateKeyFromDERBytes(blockDecrypted)

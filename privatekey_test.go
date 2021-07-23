@@ -132,7 +132,7 @@ func TestParsePrivateKeyFromEncryptedPEMBytes(t *testing.T) {
 		{name: "RSA PKCS8 RFC1423 wrong password", args: args{pemBytes: encryptedRsaPKCS8WrongPassword}, want: nil, wantErr: x509.IncorrectPasswordError},
 
 		{name: "RSA PKCS8 2.0", args: args{pemBytes: rsaPKCS8Encrypted}, want: rsaKey, wantErr: nil},
-		{name: "RSA PKCS8 2.0 wrong password", args: args{pemBytes: rsaPKCS8EncryptedWrongPassword}, want: nil, wantErr: keybox.ErrNotAPrivateKey},
+		{name: "RSA PKCS8 2.0 wrong password", args: args{pemBytes: rsaPKCS8EncryptedWrongPassword}, want: nil, wantErr: keybox.ErrUnknownEncryption},
 
 		{name: "ecdsa PKCS8 RFC1423", args: args{pemBytes: encryptedEcdsaPKCS8}, want: ecdsaKey, wantErr: nil},
 		{name: "ecdsa SEC1 RFC1423", args: args{pemBytes: encryptedEcdsaSEC1}, want: ecdsaKey, wantErr: nil},
