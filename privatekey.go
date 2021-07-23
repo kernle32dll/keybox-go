@@ -56,7 +56,9 @@ func ParsePrivateKeyFromPEMBytes(pemBytes []byte) (crypto.PrivateKey, error) {
 
 // ParsePrivateKeyFromEncryptedPEMBytes parses and decrypts a given byte array and password to
 // a PEM block, and parses that block for a known private key (see ParsePrivateKeyFromDERBytes).
-// Will return ErrKeyMustBePEMEncoded if the given byte array is not a valid PEM block.
+// Will return ErrKeyMustBePEMEncoded if the given byte array is not a valid PEM block, or
+// ErrUnknownEncryption if the byte array was encrypted in an unknown format, or not encrypted
+// at all.
 func ParsePrivateKeyFromEncryptedPEMBytes(pemBytes []byte, password []byte) (crypto.PrivateKey, error) {
 	var block *pem.Block
 	if block, _ = pem.Decode(pemBytes); block == nil {

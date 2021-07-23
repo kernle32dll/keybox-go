@@ -47,19 +47,25 @@ func ParsePublicKeyFromPEMBytes(pemBytes []byte) (crypto.PublicKey, error) {
 
 // ParsePublicKeyFromEncryptedPEMBytes parses and decrypts a given byte array and password to
 // a PEM block, and parses that block for a known public key (see ParsePublicKeyFromDERBytes).
-// Will return ErrKeyMustBePEMEncoded if the given byte array is not a valid PEM block.
+// Will return ErrKeyMustBePEMEncoded if the given byte array is not a valid PEM block, or
+// ErrUnknownEncryption if the byte array was encrypted in an unknown format, or not encrypted
+// at all.
 func ParsePublicKeyFromEncryptedPEMBytes(pemBytes []byte, password []byte) (crypto.PublicKey, error) {
 	var block *pem.Block
 	if block, _ = pem.Decode(pemBytes); block == nil {
 		return nil, ErrKeyMustBePEMEncoded
 	}
 
-	var (
-		err            error
-		blockDecrypted []byte
-	)
-	if blockDecrypted, err = x509.DecryptPEMBlock(block, password); err != nil {
-		return nil, err
+	var blockDecrypted []byte
+	if x509.IsEncryptedPEMBlock(block) {
+		var err error
+		if blockDecrypted, err = x509.DecryptPEMBlock(block, password); err != nil {
+			return nil, err
+		}
+	} else {
+		// Either its not a password secured block, or is encrypted in a format
+		// we don't know.
+		return nil, ErrUnknownEncryption
 	}
 
 	return ParsePublicKeyFromDERBytes(blockDecrypted)
