@@ -20,4 +20,4 @@ Detailed documentation can be found on [pkg.go.dev](https://pkg.go.dev/github.co
 
 ## Compatibility
 
-keybox-go is automatically tested against Go 1.14.X, 1.15.X and 1.16.X.
+keybox-go is automatically tested against Go 1.15.X, 1.16.X and 1.17.X.
