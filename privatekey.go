@@ -59,6 +59,7 @@ func ParsePrivateKeyFromPEMBytes(pemBytes []byte) (crypto.PrivateKey, error) {
 // Will return ErrKeyMustBePEMEncoded if the given byte array is not a valid PEM block, or
 // ErrUnknownEncryption if the byte array was encrypted in an unknown format, or not encrypted
 // at all.
+// Note: Usage of RFC 1423 encrypted PEM blocks is deprecated since Go 1.16! Use PKCS #8 instead.
 func ParsePrivateKeyFromEncryptedPEMBytes(pemBytes []byte, password []byte) (crypto.PrivateKey, error) {
 	var block *pem.Block
 	if block, _ = pem.Decode(pemBytes); block == nil {
@@ -66,8 +67,10 @@ func ParsePrivateKeyFromEncryptedPEMBytes(pemBytes []byte, password []byte) (cry
 	}
 
 	var blockDecrypted []byte
+	// nolint: staticcheck: Just passing through - deprecation is communicated in function signature
 	if x509.IsEncryptedPEMBlock(block) {
 		var err error
+		// nolint: staticcheck
 		if blockDecrypted, err = x509.DecryptPEMBlock(block, password); err != nil {
 			return nil, err
 		}
